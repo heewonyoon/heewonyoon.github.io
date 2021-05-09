@@ -1,0 +1,382 @@
+---
+title: "Project 2"
+author: "Heewon Yoon"
+date: '5/4/2021'
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,fig.align="center",warning=FALSE,message=FALSE,fig.width=8, fig.height=5, linewidth=60)
+options(tibble.width = 100,width = 100)
+library(tidyverse)
+
+```
+
+
+```{R}
+covid <- read.csv(file = "covid19.csv",
+                  header = TRUE, 
+                  quote="\"", 
+                  stringsAsFactors= TRUE, 
+                 strip.white = TRUE)
+
+```
+
+# Introduction
+
+The dataset I chose shows the death counts for influenza, pneumonia, and COVID-19 reported to National Center for Health Statistics (NCHS) during the year of 2020 to 2021. The data is organized by date, state, and age group. For my categorical variable, I will be using the age groups, which splits into 4 groups including all age, 0-17 years, 18-64 years, and 65 years and over. For the binary variable, I will be using the year that the data was collected, which divides into 2020 and 2021. For the numerical variables, I will be using the COVID-19 deaths, Influenza deaths, and Pneumonia deaths. The deaths were recorded weekly starting from 1/4/2020 through 4/24/2021 for each state and age groups, and there are total of 17388 observations. 
+
+# 1. MANOVA Test
+```{R}
+man1<-manova(cbind(COVID.19.Deaths,Pneumonia.Deaths,Influenza.Deaths)~Age.Group, data=covid)
+summary(man1)
+
+summary.aov(man1)
+
+covid1 <- na.omit(covid)
+
+library(rstatix)
+group <- covid1$Age.Group
+DVs <- covid1 %>% select(COVID.19.Deaths,Pneumonia.Deaths,Influenza.Deaths)
+sapply(split(DVs,group), mshapiro_test)
+lapply(split(DVs,group), cov)
+
+covid1 %>% group_by(Age.Group) %>% summarize(mean(COVID.19.Deaths),mean(Pneumonia.Deaths), mean(Influenza.Deaths))
+
+pairwise.t.test(covid1$COVID.19.Deaths,covid1$Age.Group, p.adj="none")
+pairwise.t.test(covid1$Pneumonia.Deaths,covid1$Age.Group, p.adj="none")
+pairwise.t.test(covid1$Influenza.Deaths,covid1$Age.Group, p.adj="none")
+
+0.05/22
+
+1- 0.95^22
+
+```
+
+A one-way MANOVA was conducted to determine the effect of the age groups (All age, 0-17,18-65, and 65+) on three dependent variables (COVID deaths, Pneumonia deaths, Influenza deaths). Multivariate normality and relative homogeneity were revealed through multivariate normality assumption test and covariance matrices. Significant differences were found among 4 age groups for at least one of the dependent variables. 1 MANOVA test, 3 ANOVAs, and 18 t tests (22 tests) were performed.  The probability that you have made at least one type I error is 0.6764. The significance level should be 0.00227 to keep the overall type I error rate at .05.
+Some of the MANOVA assumptions include random samples, multivariate normality, homogeneity, linear relationships, no extreme univariate/multivariate outliers. Some of the assumptions were probably violated. 
+
+# 2. Randomization Test 
+```{R}
+
+covid_19 <- c(1384,1055,928,753,563,442,349,200,92,40)
+pneumonia <- c(991,795,747,645,526,418,368,234,122,46)
+
+
+deaths <-data.frame(disease=c(rep("covid_19",10),rep("pneumonia",10)),deathnumber=c(covid_19,pneumonia))
+head(deaths)
+new<-data.frame(disease=sample(deaths$disease),deathnumber=deaths$deathnumber)
+new%>%group_by(disease)%>%
+   summarize(means=mean(deathnumber))%>%summarize(`mean_diff`=diff(means))
+``` 
+
+```{R}
+rand_dist<-vector() 
+
+for(i in 1:5000){
+new<-data.frame(disease=sample(deaths$disease),deathnumber=deaths$deathnumber) 
+rand_dist[i]<-mean(new[new$disease=="covid_19",]$deathnumber)-   
+              mean(new[new$disease=="pneumonia",]$deathnumber)}
+
+{hist(rand_dist,main="",ylab=""); abline(v = c(-200.8, 200.8),col="red")}
+``` 
+
+```{R}
+mean(rand_dist>208.8 | rand_dist < -200.8)
+``` 
+
+The null hypothesis is that the mean number of deaths for past 3 months (February to April) is the same for COVID 19 and Pneumonia. The alternative hypothesis is that the mean number of deaths is different for COVID 19 and Pneumonia. After taking 5000 random permutations, I made a histogram. The two-tailed p-value was 0.227, so I failed to reject the null hypothesis. This means that I failed to reject that the mean number of deaths is the same for COVID 19 and Pneumonia. 
+
+# 3. Linear Regression Model 
+```{R}
+
+fit<-lm(Total.Deaths ~ COVID.19.Deaths*Age.Group, data=covid1); summary(fit)
+
+coviddeaths_c <- covid1$COVID.19.Deaths - mean(covid1$COVID.19.Deaths, 
+    na.rm = TRUE)
+fitt <- lm(Total.Deaths ~ coviddeaths_c * Age.Group, data = covid1)
+summary(fitt)
+
+```
+
+For every 1-unit increase in COVID.19.Deaths, the predicted Total.Deaths increases by 87.58. The Age.Group of 18-64 years with zero COVID.19.Deaths have predicted Total.Deaths that is 429 higher than the Age.Group of 0-17 years with zero COVID.19.Deaths. The Age.Group of 65 years and over with zero COVID.19.Deaths have predicted Total.Deaths that is 19514.54 higher than the Age.Group of 0-17 years with zero COVID.19.Deaths. When I mean center the data, it shows that the Age.Group of 18-64 years with average COVID.19.Deaths have predicted Total.Deaths that is 19154.21 less than the Age.Group of 0-17 years with average COVID.19.Deaths. The Age.Group of 65 years and over with average COVID.19.Deaths have predicted Total Deaths that is 17149 lower than the Age.Group of 0-17 years with average COVID.19.Deaths. The slope of Covid Deaths on Total Deaths for the Age Group 18-64 years was 81.62 less than the Age Group 0-17. 
+
+## Plot
+```{R}
+covid1 %>% select(Total.Deaths, COVID.19.Deaths, Age.Group) %>% na.omit %>% 
+    ggplot(aes(COVID.19.Deaths, Total.Deaths, color = Age.Group)) + 
+    geom_point() + geom_smooth(method = "lm") + geom_vline(xintercept = mean(covid1$COVID.19.Deaths, 
+    na.rm = T), lty = 2)
+```
+
+## Assumptions and Robust Standard Errors
+```{R}
+#install.packages("lmtest")
+library(lmtest)
+fit2 <-lm(Total.Deaths ~ COVID.19.Deaths*Age.Group, data=covid1)
+bptest(fitt)
+
+resids<-fit2$residuals; fitvals<-fit2$fitted.values
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, col="red")
+
+
+par(mfrow=c(1,2)); hist(resids); qqnorm(resids); qqline(resids, col='red')
+
+ks.test(resids, "pnorm", sd=sd(resids))
+
+sum((fitvals-mean(covid1$Total.Deaths))^2)/sum((covid1$Total.Deaths-mean(covid1$Total.Deaths))^2)
+
+#install.packages("sandwich")
+library(sandwich)
+coeftest(fit2)[,1:2]
+coeftest(fit2, vcov = vcovHC(fit2))
+```
+
+66.6 percent of the variation is explained by the model. The histogram of residuals seems pretty normal but it did not meet the linearity assumption. The residuals are concentrated in one area so it is hard to tell it's homoscedastic. The robust standard error did not change any coefficients but decreased the overall values of the standard errors.  
+
+# 4. Bootstrapped Standard Errors
+```{R}
+fit2 <-lm(Total.Deaths ~ COVID.19.Deaths*Age.Group, data=covid1) 
+resids<-fit2$residuals 
+fitted<-fit2$fitted.values 
+
+resid_resamp<-replicate(5000,{
+new_resids<-sample(resids,replace=TRUE) #resample resids w/ replacement
+new_y<-fitted+new_resids #add new resids to yhats to get new "data"
+fit<-lm(new_y~COVID.19.Deaths*Age.Group,data=covid1) #refit model
+coef(fit)
+})
+
+resid_resamp%>%t%>%as.data.frame%>%summarize_all(sd)
+
+```
+
+ The standard errors were close to the ones before the robust standard errors were applied. It should provide lower p-values. 
+ 
+# 5. Logistic Regression 
+```{R}
+
+data<-covid1%>%mutate(y=ifelse(MMWRyear=="2020",1,0))
+data$outcome<-factor(covid1$MMWRyear,levels=c("2020","2021"))
+head(data)
+
+fit3<-glm(y~ Total.Deaths + COVID.19.Deaths , family="binomial", data=data)
+coeftest(fit3)
+exp(coef(fit3))
+
+probs<-predict(fit3,type="response")
+table(predict=as.numeric(probs>.5),truth=data$y)%>%addmargins #confusion matrix 
+
+(6+6194)/8346 #accuracy
+
+6/17 #tpr(sensitivity)
+
+6194/8329 #tnr(specificity)
+
+6/2141 #ppv(precision)
+
+
+```
+
+The Total.Deaths increases the log-odds of year 2020 (more likely to be 2020), and COVID.19.Deaths decrease the log-odds for year 2020(more likely to be 2021). The odds of being year 2020 occurring at Total Deaths 0 is 2.776. 
+Going up 1 Total.Deaths multiplies odds by a factor of e^5.8718e-05 = 1.000. Going up 1 COVID.19.Deaths multiplies odds by a factor of e^-2.7010e-04 = 0.9997. 
+
+## Density Plot 
+```{R}
+logistic <- function(x){exp(x)/(1+exp(x))} #inverse of the logit is the logistic
+ggplot()+geom_function(fun=logistic)+xlim(-6,6)+xlab("t")+ylab("p( y = 1 )")
+
+fit3<-glm(y~ Total.Deaths + COVID.19.Deaths , family="binomial", data=data)
+
+data$prob <- predict(fit3,type="response") #get predicted probabilities
+data$predicted <- ifelse(data$prob>.5,"2020","2021") #get predicted outcomes
+
+ggplot(data, aes(Total.Deaths + COVID.19.Deaths,y))+geom_jitter(aes(color=predicted),width=.5,height=0)+
+  stat_smooth(method="glm",method.args=list(family="binomial"),se=F)+ylab("2020 (0,1)")
+
+odds<-function(p)p/(1-p)
+
+p<-seq(0,1,by=.1)
+cbind(p, odds=odds(p))%>%round(4)
+logit<-function(p)log(odds(p))
+cbind(p, odds=odds(p),logit=logit(p))%>%round(4)
+
+fit<-glm(y~Total.Deaths + COVID.19.Deaths ,data=data,family=binomial(link="logit"))
+
+data$outcome<-factor(data$outcome,levels=c("2020","2021")) #make it a factor for plotting
+data$logit<-predict(fit) #save predicted log-odds
+
+logit<-function(p)log(odds(p))
+ggplot(data,aes(logit, fill=outcome))+geom_density(alpha=.3)+
+  geom_vline(xintercept=0,lty=2)
+
+```
+
+
+## ROC Curve and AUC
+```{R}
+#install.packages("plotROC")
+library(plotROC) 
+
+ROCplot<-ggplot(data)+geom_roc(aes(d=outcome,m=prob), n.cuts=0) 
+
+ROCplot
+calc_auc(ROCplot)
+```
+
+AUC is 0.42 and it is considered bad. 
+
+# 6. Logistic Regression: All Variables
+```{R}
+
+data<-covid1%>%mutate(y=ifelse(MMWRyear=="2020",1,0))
+
+fit4 <-glm(y ~ MMWRweek + Jurisdiction + Age.Group + COVID.19.Deaths + Total.Deaths + Pneumonia.Deaths + Influenza.Deaths + Pneumonia.or.Influenza + Pneumonia..Influenza..or.COVID.19.Deaths,data=data,family="binomial")
+prob <- predict(fit4,type="response")
+probs<-predict(fit,type="response")
+
+class_diag <- function(probs, truth) {
+    # CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+    
+    if (is.character(truth) == TRUE) 
+        truth <- as.factor(truth)
+    if (is.numeric(truth) == FALSE & is.logical(truth) == FALSE) 
+        truth <- as.numeric(truth) - 1
+    
+    tab <- table(factor(probs > 0.5, levels = c("FALSE", "TRUE")), 
+        factor(truth, levels = c(0, 1)))
+    acc = sum(diag(tab))/sum(tab)
+    sens = tab[2, 2]/colSums(tab)[2]
+    spec = tab[1, 1]/colSums(tab)[1]
+    ppv = tab[2, 2]/rowSums(tab)[2]
+    
+    # CALCULATE EXACT AUC
+    ord <- order(probs, decreasing = TRUE)
+    probs <- probs[ord]
+    truth <- truth[ord]
+    
+    TPR = cumsum(truth)/max(1, sum(truth))
+    FPR = cumsum(!truth)/max(1, sum(!truth))
+    
+    dup <- c(probs[-1] >= probs[-length(probs)], FALSE)
+    TPR <- c(0, TPR[!dup], 1)
+    FPR <- c(0, FPR[!dup], 1)
+    n <- length(TPR)
+    auc <- sum(((TPR[-1] + TPR[-n])/2) * (FPR[-1] - FPR[-n]))
+    data.frame(acc, sens, spec, ppv, auc)
+}
+
+class_diag(prob, data$y)
+
+```
+
+The accuracy was 0.954, the sensitivity was 0.966, the specificity was 0.918, the precision was 0.971, and the AUC was 0.984. The AUC value is considered great. 
+
+## K-fold CV
+```{R}
+
+set.seed(1234)
+k=10 #choose number of folds
+
+data<- covid1[sample(nrow(covid1)),] #randomly order rows
+folds<-cut(seq(1:nrow(covid1)),breaks=k,labels=F) #create folds
+data<-covid1%>%mutate(y=ifelse(MMWRyear=="2020",1,0))
+
+diags<-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train<-data[folds!=i,] 
+  test<-data[folds==i,]
+  
+  truth<-test$y ## Truth labels for fold i
+  
+  ## Train model on training set (all but fold i)
+  fit<-glm(y~Total.Deaths + COVID.19.Deaths,data=train,family="binomial")
+  
+  ## Test model on test set (fold i) 
+  probs<-predict(fit,newdata = test,type="response")
+  
+  ## Get diagnostics for fold i
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+
+
+summarize_all(diags,mean) #average diagnostics across all k folds
+#install.packages("pROC")
+library(pROC)  #Compare with this AUC calculator
+auc(data$y, prob)
+```
+The accuracy was 0.742 and the precision was 0.743. The AUC value was 0.746, which is considered poor. The area under the curve 0.984.
+
+## LASSO
+```{R}
+#install.packages('glmnet')
+library(glmnet)
+set.seed(1234)
+
+y <- as.matrix(data$y)  #grab response
+x <- model.matrix(y ~  MMWRweek + Age.Group + COVID.19.Deaths + Total.Deaths + Pneumonia.Deaths + Influenza.Deaths + Pneumonia.or.Influenza + Pneumonia..Influenza..or.COVID.19.Deaths, data = data)[, -1]  #grab predictors
+head(x)
+
+x <- scale(x)
+
+cv <- cv.glmnet(x, y, family = "binomial")
+lasso <- glmnet(x, y, family = "binomial", lambda = cv$lambda.1se)
+coef(lasso)
+
+```
+
+I included the variables that do not have dates in them since these are the variables that are going to predict the year. All the variables showed non-zero coefficients. 
+
+## 10-fold CV after LASSO 
+```{R}
+set.seed(1234)
+k=10 #choose number of folds
+
+#select only rank1 indicator
+data$y<-ifelse(data$MMWRyear=="2020",1,0)
+data1<-data[sample(nrow(data)),] #randomly order rows
+folds<-cut(seq(1:nrow(data)),breaks=k,labels=F) #create folds
+
+diags<-NULL
+for(i in 1:k){
+  ## Create training and test sets
+  train<-data1[folds!=i,] 
+  test<-data1[folds==i,]
+  truth<-test$y
+  
+  ## Train model on training set
+  fit<-glm(y~MMWRweek + Age.Group + COVID.19.Deaths + Total.Deaths + Pneumonia.Deaths + Influenza.Deaths + Pneumonia.or.Influenza + Pneumonia..Influenza..or.COVID.19.Deaths,data=train,family="binomial")
+  probs<-predict(fit,newdata = test,type="response")
+  
+  ## Test model on test set (save all k results)
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+
+diags%>%summarize_all(mean)
+
+```
+
+After performing the 10-fold CV using only the variables lasso selected, the AUC value was 0.98 which is higher than 0.743 above. 
+

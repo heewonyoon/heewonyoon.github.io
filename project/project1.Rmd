@@ -1,0 +1,210 @@
+---
+title: "Project 1"
+author: "Heewon Yoon"
+date: '4/3/2021'
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    toc: no
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+
+## Introduction 
+The datasets contain information about different boy and girl groups in K-pop industry. The datas are consisted of the English and Korean names of the groups, their debut date, company name, number of current members and original members, their fandom name, and whether they are currently active or not. The data was acquired through the K-pop Database in https://dbkpop.com/. I decided to choose this data set because I am from South Korea and used to listen to K-pop. 
+
+```{R}
+#install.packages("tidyverse")
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("ggplot2")
+#install.packages("pastecs")
+#install.packages("readxl")
+#install.packages("Hmisc")
+
+library(pastecs)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(Hmisc)
+library(ggplot2)
+```
+
+## Combined Data Sets  
+```{R}
+boygroup <- read.csv(file = "boygroups.csv",
+                  header = TRUE, 
+                  quote="\"", 
+                  stringsAsFactors= TRUE, 
+                 strip.white = TRUE)
+
+girlgroup <- read.csv("girlgroups.csv", 
+                         header = TRUE, 
+                         quote="\"", 
+                         stringsAsFactors= TRUE, 
+                         strip.white = TRUE)
+
+boygroup %>% left_join(girlgroup, by = "Company")
+
+kpop_group_joined <- boygroup %>% left_join(girlgroup, by = "Company")
+
+pivot_wider(kpop_group_joined)
+
+gather(kpop_group_joined)
+```
+I used the function left_join to combine the k-pop boy group data set and the girl group data set because the both data sets had similar variables so I did not want boy and girl group information to be mixed, and I wanted to have them next to each other as separate variables. I joined them by the entertainment company name so I can have the companies with at least one girl group and one boy group for the easy compare. The boy k-pop group data set had 147 different groups with 9 different variables and the girl group had 152 different groups with 9 different variables. When the data sets were combined, 75 groups were dropped because they were from the companies with just one type of group. 
+
+## Summary Statistics 
+```{R}
+filter(kpop_group_joined, ("Members" > 1 & "Orig.Memb." > 2))
+member_over2 <- filter(kpop_group_joined, ("Members.x" > 
+    1 & "Members.y" > 2))
+```
+
+```{R}
+arrange(member_over2, Members.x)
+member_arrange <- arrange(member_over2, Members.x)
+
+select(kpop_group_joined, Name.y, Company, Members.y, Debut.y, Orig..Memb..y,
+ Active.y)
+
+Totalgroup <- select(kpop_group_joined, Name.x, Debut.x,
+    Company, Members.x, Orig..Memb..x, Active.x, Name.y, Debut.y,
+  Members.y, Orig..Memb..y, Active.y)
+
+mutate(Totalgroup, memberstayed = Members.y/Orig..Memb..y)
+
+BigCompany <- Totalgroup %>% group_by(Company) %>% filter(n() > 2)
+
+summarise(BigCompany, mem = mean(Members.x, na.rm = TRUE))
+```
+
+```{R}
+
+kpop_group_joined %>% summarise_if(is.numeric, min, na.rm = TRUE)
+kpop_group_joined %>% summarise_if(is.numeric, max, na.rm = TRUE)
+kpop_group_joined %>% summarise_if(is.numeric, var, na.rm = TRUE)
+kpop_group_joined %>% summarise_if(is.numeric, sd, na.rm = TRUE)
+kpop_group_joined %>% summarise_if(is.numeric, quantile, na.rm = TRUE)
+
+Totalgroup %>% group_by(Company)  %>% summarise_all(mean, na.rm = TRUE)
+Totalgroup %>% group_by(Active.x,Active.y) %>% summarise_all(n_distinct, na.rm = TRUE)
+
+
+kpop_group_joined %>% summarise(cor(Members.x, Members.y, use = "pair"))
+```
+
+I used the summarise_if function to find the minimum, maxium, variance, standard deviation, and quantile numbers of the numeric variables that are in the combined dataset. It is interesting how the minimum number of current members per group was the same for both boy and girl groups but the maximum number of current members per group varied greatly between the boy and girl groups. While the largest boy group had 18 members, the largest girl group had 13 members. 
+
+## Visualizations 
+
+### Heatmap
+```{R}
+
+Totalgroup %>% select_if(is.numeric) %>% cor(use = "pair")
+
+cornum <- Totalgroup %>% select_if(is.numeric) %>% cor(use = "pair")
+
+tidynum <- cornum %>% as.data.frame %>% rownames_to_column("members1") %>% 
+    pivot_longer(-1, names_to = "members2", values_to = "correlation")
+
+tidynum %>% ggplot(aes(members1, members2, fill = correlation)) + geom_tile() + 
+    scale_fill_gradient2(low = "white", mid = "pink", 
+        high = "red") + geom_text(aes(label = round(correlation, 
+    2)), color = "black", size = 5) + theme(axis.text.x = element_text(angle = 75, hjust = 1)) + coord_fixed()+
+   labs(title = "Number of Members Correlation")
+
+```
+The numeric variables that I included in this heat map are the current and the original number of members for both boy and girl groups. The map shows the correlation between each of the variables, with 0 being there is no correlation between the variables and 1 being there is a greatest correlation between the two variables. The map shows that while the number of original and the current members in boy groups showed 0.93 correlation, the number of original and the current members in girl groups showed 0.81 correlation. This could mean that there were more discrepancy in number of members who remained in the girl groups than the boy groups. It is also interesting that while the original members of boy and girl groups showed weak negative correlation (-0.03), the current members of boy and girl group showed weak positive correlation of 0.05. The original and the current number of members of opposite gender showed very weak correlation of -0.01 and 0.02.
+
+### Plot1
+```{R}
+ggplot(data = Totalgroup, aes(x = Members.x, y = Orig..Memb..x, color = Company)) + 
+  geom_point(size=4) + geom_line(aes(group=Company)) + 
+  theme(legend.position="none") +
+  labs(title = "Current Members vs Original Members")+
+  labs(x = "Current Number of Members in Boy Groups",y = "Original Number of Members in Boy Groups" )
+
+
+```
+
+The data includes the current number of members in different k-pop boy groups as well as the original number of members when they debuted. The point colors are organized by different companies. The plot shows that for most companies, there's a linear relationship between the current and the original number of members in each group. The number of members are clustered between approximately 2 members to 8 members.
+
+### Plot2
+```{R}
+ggplot(data = Totalgroup, aes(x = Members.y, y = Orig..Memb..y, color = Company)) + 
+  geom_point(size=4) + geom_line(aes(group=Company)) + 
+  theme(legend.position="none")+
+scale_x_continuous(breaks = pretty(Totalgroup$Members.y, n = 12)) +
+scale_y_continuous(breaks = pretty(Totalgroup$Orig..Memb..y, n = 12))+
+  xlab("Current Number of Members in Girl Groups") + ylab("Original Number of Members in Girl Groups") + 
+    labs(color = "Company")+
+  labs(title = "Original Number of Members vs. Current Number of Members")
+```
+This data includes current number of members in different k-pop girl groups as wells the original number of members when they debuted. The points were organized by different companies they are from. The data generally shows the linear relationship between the current and the original number of members, but I could also see a significant drop in number of members for several groups. The data also shows that while each company had a wide range of number of members per group (2-15), the each company generally had girl groups with similar number of members. 
+
+### Plot3
+```{R}
+
+ggplot(Totalgroup, aes(x = Company)) + geom_bar(aes(y = Members.y, color = Active.y
+     ),  stat = "summary", fun = mean) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + xlab("Company") + ylab("Current Members in groups") + 
+    labs(color = "Active Status") + scale_fill_gradient2(low = "white", 
+    mid = "yellow", high = "brown")+
+  labs(title = "Average Group Member Numbers by Company")
+
+```
+The data shows the current number of members for the girl groups in entertainment companies in South Korea. The plot also shows the percentage of groups that are currently active, inactive, or on a break. The data shows that there are multiple companies that show no current members, meaning they currently do not have any girl groups that It is interesting how half of YG, Cube, DSP groups  are currently inactive. 
+
+## K-Means Clustering 
+```{R}
+
+#install.packages("cluster")
+library(cluster) #load the cluster package
+Totalgroup2 <- na.omit(Totalgroup) #omit missing values 
+clust_dat <- Totalgroup2%>%dplyr::select(Members.x, Orig..Memb..x, Members.y) #select what variables you want to use for clustering
+
+
+sil_width <- vector()  #empty vector to hold mean sil width
+for (i in 2:10) {
+    kms <- kmeans(clust_dat,centers = i)  #compute k-means solution
+    sil <- silhouette(kms$cluster, dist(clust_dat))  #get sil widths
+    sil_width[i] <- mean(sil[, 3])  #take averages 
+}
+ sil_width[i]
+ggplot() + geom_line(aes(x = 1:10, y = sil_width)) + scale_x_continuous(name = "k", 
+    breaks = 1:10) #plot the silhouette to visualize 
+
+kmeans1<-clust_dat%>% scale%>%kmeans(2) #scale the variables and set number of clusters k
+kmeans1
+
+kmeansclust <- clust_dat %>% as.data.frame %>% mutate(cluster = as.factor(kmeans1$cluster)) #add the vector to the original data 
+kmeansclust
+```
+I chose the number of current and original members in boy groups and the current number of members in girl groups variables for K-Means clustering. I first had to omit the NAs because the function did not work with non-number values, which resulted in loss of some numbers. In order to do the clustering, I first had to determine the number of clusters. Therefore, I chose the Silhouette width and ran the clusters from 2 to 10 to see the most cohesive and separated clusters. After running through the code and looking at the plot for the visual, the highest average silhouette width for my data was 2 so I set my k as 2. I also scaled my variables to standardize the features. Lastly, I added the vector back to the original data using the mutate function. 
+
+
+### Visualization of Clusters 
+```{R}
+
+kmeansclust %>% ggplot(aes(Members.x, Orig..Memb..x,Members.y , color = cluster)) + 
+    geom_point()+
+  xlab("Current Number of Members in Boy Groups") + ylab("Original Number of Members in Boy Groups") + 
+    labs(color = "Cluster")+
+  labs(title = "Original Number of Members vs. Current Number of Members")
+
+#install.packages("GGally")
+library(GGally)
+ggpairs(kmeansclust, columns = 1:3, aes(color = cluster))
+
+```
+In order to analyze the clusters, I utilized the ggplot2 function to graph the clusters. The blue cluster is the groups with relatively low numbers of current members and low numbers of original members. The red cluster shows groups with high number of current members and high number of original members. I also used ggpairs to analyze different cluster patterns for other x and y values. For the graph with the current boy group member as x axis and the current girl group member as y axis, the blue clusters showed the groups that have low girl members and low to high boy members. The other three graphs showed similar pattern with filled in lines. The last 3 graphs showed the correlation values between the variables. 
+
