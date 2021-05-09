@@ -1,7 +1,7 @@
 ---
 title: "Project 1"
 author: "Heewon Yoon"
-date: '4/3/2021'
+date: '2021-04-03'
 output:
   html_document:
     toc: yes

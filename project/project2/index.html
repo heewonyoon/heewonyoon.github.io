@@ -60,7 +60,7 @@
  
 <div class="blog-title">
           <h4>
-         January 1, 0001 
+         May 4, 2021 
             &nbsp;&nbsp;
             
           </h4>
@@ -224,7 +224,7 @@ new%&gt;%group_by(disease)%&gt;%
 <pre><code>## # A tibble: 1 x 1
 ##   mean_diff
 ##       &lt;dbl&gt;
-## 1     -22.2</code></pre>
+## 1      92.8</code></pre>
 <pre class="r"><code>rand_dist&lt;-vector() 
 
 for(i in 1:5000){
@@ -235,7 +235,7 @@ rand_dist[i]&lt;-mean(new[new$disease==&quot;covid_19&quot;,]$deathnumber)-
 {hist(rand_dist,main=&quot;&quot;,ylab=&quot;&quot;); abline(v = c(-200.8, 200.8),col=&quot;red&quot;)}</code></pre>
 <p><img src="../../project/project2_files/figure-html/unnamed-chunk-4-1.png" width="768" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>mean(rand_dist&gt;208.8 | rand_dist &lt; -200.8)</code></pre>
-<pre><code>## [1] 0.2276</code></pre>
+<pre><code>## [1] 0.2226</code></pre>
 <p>The null hypothesis is that the mean number of deaths for past 3 months (February to April) is the same for COVID 19 and Pneumonia. The alternative hypothesis is that the mean number of deaths is different for COVID 19 and Pneumonia. After taking 5000 random permutations, I made a histogram. The two-tailed p-value was 0.227, so I failed to reject the null hypothesis. This means that I failed to reject that the mean number of deaths is the same for COVID 19 and Pneumonia.</p>
 </div>
 <div id="linear-regression-model" class="section level1">
@@ -390,12 +390,12 @@ coef(fit)
 resid_resamp%&gt;%t%&gt;%as.data.frame%&gt;%summarize_all(sd)</code></pre>
 <pre><code>## (Intercept) COVID.19.Deaths Age.Group18-64 years
 Age.Group65 years and over Age.GroupAll Ages
-## 1 110.7463 98.94189 151.0157 142.3315 142.6786
+## 1 110.1823 102.3163 148.1379 140.5263 142.9272
 ## COVID.19.Deaths:Age.Group18-64 years
 COVID.19.Deaths:Age.Group65 years and over
-## 1 98.94131 98.94347
+## 1 102.3174 102.3175
 ## COVID.19.Deaths:Age.GroupAll Ages
-## 1 98.94282</code></pre>
+## 1 102.3162</code></pre>
 <p>The standard errors were close to the ones before the robust standard errors were applied. It should provide lower p-values.</p>
 </div>
 <div id="logistic-regression" class="section level1">

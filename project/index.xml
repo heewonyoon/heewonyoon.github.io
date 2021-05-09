@@ -5,23 +5,24 @@
     <link>/project/</link>
     <description>Recent content in Projects on My Website</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-US</language><atom:link href="/project/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Project 1</title>
-      <link>/project/project1/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/project/project1/</guid>
-      <description>knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = &amp;quot;center&amp;quot;, warning = F, message = F, tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100)) Introduction The datasets contain information about different boy and girl groups in K-pop industry. The datas are consisted of the English and Korean names of the groups, their debut date, company name, number of current members and original members, their fandom name, and whether they are currently active or not. The data was acquired through the K-pop Database in https://dbkpop.</description>
-    </item>
-    
+    <language>en-US</language>
+    <lastBuildDate>Tue, 04 May 2021 00:00:00 +0000</lastBuildDate><atom:link href="/project/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Project 2</title>
       <link>/project/project2/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <pubDate>Tue, 04 May 2021 00:00:00 +0000</pubDate>
       
       <guid>/project/project2/</guid>
       <description>covid &amp;lt;- read.csv(file = &amp;quot;covid19.csv&amp;quot;, header = TRUE, quote=&amp;quot;\&amp;quot;&amp;quot;, stringsAsFactors= TRUE, strip.white = TRUE) Introduction The dataset I chose shows the death counts for influenza, pneumonia, and COVID-19 reported to National Center for Health Statistics (NCHS) during the year of 2020 to 2021. The data is organized by date, state, and age group. For my categorical variable, I will be using the age groups, which splits into 4 groups including all age, 0-17 years, 18-64 years, and 65 years and over.</description>
+    </item>
+    
+    <item>
+      <title>Project 1</title>
+      <link>/project/project1/</link>
+      <pubDate>Sat, 03 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project1/</guid>
+      <description>knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = &amp;quot;center&amp;quot;, warning = F, message = F, tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100)) Introduction The datasets contain information about different boy and girl groups in K-pop industry. The datas are consisted of the English and Korean names of the groups, their debut date, company name, number of current members and original members, their fandom name, and whether they are currently active or not. The data was acquired through the K-pop Database in https://dbkpop.</description>
     </item>
     
   </channel>
